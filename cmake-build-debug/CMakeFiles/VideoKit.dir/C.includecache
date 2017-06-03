@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+.././include/dev.h
+
+/home/anonymousjp/Desktop/VideoKit/src/main.c
+stdio.h
+-
+dev.h
+/home/anonymousjp/Desktop/VideoKit/src/dev.h
+libavutil/avutil.h
+-
+libavformat/avformat.h
+-
+
