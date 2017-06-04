@@ -92,6 +92,12 @@
 		<Unit filename="/home/anonymousjp/Desktop/VideoKit/src/main.c">
 			<Option target="VideoKit"/>
 		</Unit>
+		<Unit filename="/home/anonymousjp/Desktop/VideoKit/test/muxing.c">
+			<Option target="VideoKit"/>
+		</Unit>
+		<Unit filename="/home/anonymousjp/Desktop/VideoKit/test/muxing.h">
+			<Option target="VideoKit"/>
+		</Unit>
 		<Unit filename="/home/anonymousjp/Desktop/VideoKit/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>

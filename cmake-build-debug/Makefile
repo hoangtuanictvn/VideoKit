@@ -150,6 +150,33 @@ src/main.c.s:
 	$(MAKE) -f CMakeFiles/VideoKit.dir/build.make CMakeFiles/VideoKit.dir/src/main.c.s
 .PHONY : src/main.c.s
 
+test/muxing.o: test/muxing.c.o
+
+.PHONY : test/muxing.o
+
+# target to build an object file
+test/muxing.c.o:
+	$(MAKE) -f CMakeFiles/VideoKit.dir/build.make CMakeFiles/VideoKit.dir/test/muxing.c.o
+.PHONY : test/muxing.c.o
+
+test/muxing.i: test/muxing.c.i
+
+.PHONY : test/muxing.i
+
+# target to preprocess a source file
+test/muxing.c.i:
+	$(MAKE) -f CMakeFiles/VideoKit.dir/build.make CMakeFiles/VideoKit.dir/test/muxing.c.i
+.PHONY : test/muxing.c.i
+
+test/muxing.s: test/muxing.c.s
+
+.PHONY : test/muxing.s
+
+# target to generate assembly for a file
+test/muxing.c.s:
+	$(MAKE) -f CMakeFiles/VideoKit.dir/build.make CMakeFiles/VideoKit.dir/test/muxing.c.s
+.PHONY : test/muxing.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -162,6 +189,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... test/muxing.o"
+	@echo "... test/muxing.i"
+	@echo "... test/muxing.s"
 .PHONY : help
 
 

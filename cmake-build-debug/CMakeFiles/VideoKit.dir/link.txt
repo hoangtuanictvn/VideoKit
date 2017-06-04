@@ -1,1 +1,1 @@
-/usr/bin/cc  -g   CMakeFiles/VideoKit.dir/src/main.c.o  -o VideoKit  -L/home/anonymousjp/Desktop/VideoKit/./lib -Wl,-rpath,/home/anonymousjp/Desktop/VideoKit/./lib -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale 
+/usr/bin/cc  -g   CMakeFiles/VideoKit.dir/src/main.c.o CMakeFiles/VideoKit.dir/test/muxing.c.o  -o VideoKit  -L/home/anonymousjp/Desktop/VideoKit/./lib -Wl,-rpath,/home/anonymousjp/Desktop/VideoKit/./lib -lavcodec -lavdevice -lavfilter -lavformat -lavutil -lswresample -lswscale 

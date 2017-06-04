@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/VideoKit.dir/src/main.c.o"
+  "CMakeFiles/VideoKit.dir/test/muxing.c.o"
   "VideoKit.pdb"
   "VideoKit"
 )

@@ -4,3 +4,5 @@
 CMakeFiles/VideoKit.dir/src/main.c.o: .././include/dev.h
 CMakeFiles/VideoKit.dir/src/main.c.o: ../src/main.c
 
+CMakeFiles/VideoKit.dir/test/muxing.c.o: ../test/muxing.c
+
