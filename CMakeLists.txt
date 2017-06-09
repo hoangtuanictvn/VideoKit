@@ -8,11 +8,13 @@ set(SOURCE_FILES src/main.c include/dev.h)
 add_executable(VideoKit ${SOURCE_FILES})
 target_link_libraries(
         VideoKit
-        libavcodec.so
-        libavdevice.so
-        libavfilter.so
-        libavformat.so
-        libavutil.so
-        libswresample.so
-        libswscale.so
+        avcodec
+        avdevice
+        avfilter
+        avformat
+        avresample
+        avutil
+        postproc
+        swresample
+        swscale
 )
