@@ -1,87 +1,182 @@
-#include <libavcodec/avcodec.h>
+/*
+ * @author: Hoang Tuan
+ * @date:
+ * @filename: main.c
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <libavformat/avformat.h>
-#include <libavformat/avio.h>
-#include <libavutil/file.h>
+#include <libavutil/imgutils.h>
 
-struct buffer_data {
-    uint8_t *ptr;
-    size_t size; ///< size left in the buffer
-};
+#define CRAZY_DEBUG
+#include "utils.h"
+#define JAVA_CODING_STYLE
+#include "java.h"
 
-static int read_packet(void *opaque, uint8_t *buf, int buf_size)
-{
-    struct buffer_data *bd = (struct buffer_data *)opaque;
-    buf_size = FFMIN(buf_size, bd->size);
-    printf("ptr:%p size:%zu\n", bd->ptr, bd->size);
-    /* copy internal buffer data to buf */
-    memcpy(buf, bd->ptr, buf_size);
-    bd->ptr  += buf_size;
-    bd->size -= buf_size;
-    return buf_size;
+int open_codec_context(AVFormatContext*,int*,enum AVMediaType);
+
+void save_frame_as_jpeg(AVFormatContext* formatContext,AVCodecContext *codecContext, AVFrame *frame, int frameno) {
+    AVCodec *jpegCodec = avcodec_find_encoder(AV_CODEC_ID_JPEG2000);
+    if (!jpegCodec) {
+        return;
+    }
+    AVCodecContext *jpegContext = avcodec_alloc_context3(jpegCodec);
+    if (!jpegContext) {
+        return;
+    }
+
+    jpegContext->pix_fmt = codecContext->pix_fmt;
+    jpegContext->height = frame->height;
+    jpegContext->width = frame->width;
+    jpegContext->sample_aspect_ratio = codecContext->sample_aspect_ratio;
+    jpegContext->time_base = codecContext->time_base;
+    jpegContext->compression_level = 100;
+    jpegContext->thread_count = 1;
+    jpegContext->prediction_method = 1;
+    jpegContext->flags2 = 0;
+    jpegContext->rc_max_rate = jpegContext->rc_min_rate = jpegContext->bit_rate = 80000000;
+
+    if (avcodec_open2(jpegContext, jpegCodec, NULL) < 0) {
+        return;
+    }
+
+    FILE *JPEGFile;
+    char JPEGFName[256];
+
+    AVPacket packet = {.data = NULL, .size = 0};
+    av_init_packet(&packet);
+    int gotFrame;
+
+    if (avcodec_encode_video2(jpegContext, &packet, frame, &gotFrame) < 0) {
+        return;
+    };
+
+    sprintf(JPEGFName, "dvr-%06d.jpg",frameno);
+    JPEGFile = fopen(JPEGFName, "wb");
+    fwrite(packet.data, 1, packet.size, JPEGFile);
+    fclose(JPEGFile);
+
+    av_free_packet(&packet);
+    avcodec_close(jpegContext);
+
 }
-int main(int argc, char *argv[])
-{
-    AVFormatContext *fmt_ctx = NULL;
-    AVIOContext *avio_ctx = NULL;
-    uint8_t *buffer = NULL, *avio_ctx_buffer = NULL;
-    size_t buffer_size, avio_ctx_buffer_size = 4096;
-    char *input_filename = NULL;
-    int ret = 0;
-    struct buffer_data bd = { 0 };
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s input_file\n"
-                "API example program to show how to read from a custom buffer "
-                "accessed through AVIOContext.\n", argv[0]);
-        return 1;
-    }
-    input_filename = argv[1];
-    /* register codecs and formats and other lavf/lavc components*/
+
+
+int main(){
+
+    AVFormatContext *formatContext = nil;
+    AVCodecContext *codecContext = nil;
+    AVStream* videoStream = nil;
+    AVFrame* imageFrame;
+    AVPacket sendingPacket;
+    int videoStreamIndex = 0, response = 0;
+    uint8_t *desData[4] = {nil};
+    int desLineSize[4];
+    int buffSize = 0;
+    int gotFrameCount;
+
     av_register_all();
-    /* slurp file content into buffer */
-    ret = av_file_map(input_filename, &buffer, &buffer_size, 0, NULL);
-    if (ret < 0)
-        goto end;
-    /* fill opaque structure used by the AVIOContext read callback */
-    bd.ptr  = buffer;
-    bd.size = buffer_size;
-    if (!(fmt_ctx = avformat_alloc_context())) {
-        ret = AVERROR(ENOMEM);
-        goto end;
+
+    if(avformat_open_input(&formatContext,IP_FILE,null,null)<0){
+        printf("Can't open %s\n",IP_FILE);
+        return 0;
     }
-    avio_ctx_buffer = av_malloc(avio_ctx_buffer_size);
-    if (!avio_ctx_buffer) {
-        ret = AVERROR(ENOMEM);
-        goto end;
-    }
-    avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size,
-                                  0, &bd, &read_packet, NULL, NULL);
-    if (!avio_ctx) {
-        ret = AVERROR(ENOMEM);
-        goto end;
-    }
-    fmt_ctx->pb = avio_ctx;
-    ret = avformat_open_input(&fmt_ctx, NULL, NULL, NULL);
-    if (ret < 0) {
-        fprintf(stderr, "Could not open input\n");
-        goto end;
-    }
-    ret = avformat_find_stream_info(fmt_ctx, NULL);
-    if (ret < 0) {
+
+    LOGI("NBStream",formatContext->nb_streams);
+
+    if (avformat_find_stream_info(formatContext, nil) < 0) {
         fprintf(stderr, "Could not find stream information\n");
-        goto end;
+        exit(1);
     }
-    av_dump_format(fmt_ctx, 0, input_filename, 0);
-    end:
-    avformat_close_input(&fmt_ctx);
-    /* note: the internal buffer could have changed, and be != avio_ctx_buffer */
-    if (avio_ctx) {
-        av_freep(&avio_ctx->buffer);
-        av_freep(&avio_ctx);
+    if(open_codec_context(formatContext,&videoStreamIndex,AVMEDIA_TYPE_VIDEO)>=0){
+        videoStream = formatContext->streams[videoStreamIndex];
+        codecContext = videoStream->codec;
+        response = av_image_alloc(desData,desLineSize,codecContext->width,codecContext->height,codecContext->pix_fmt,1);
+        if (response < 0) {
+            fprintf(stderr, "Could not allocate raw video buffer\n");
+            return 0;
+        }
+        buffSize = response;
+    } else{
+        LOL
     }
-    av_file_unmap(buffer, buffer_size);
-    if (ret < 0) {
-        fprintf(stderr, "Error occurred: %s\n", av_err2str(ret));
-        return 1;
+    LOGI("BuffSize",buffSize);
+
+    av_dump_format(formatContext,0,IP_FILE,0);
+
+    imageFrame = av_frame_alloc();
+    if (!imageFrame) {
+        fprintf(stderr, "Could not allocate frame\n");
+        response = AVERROR(ENOMEM);
+        return 0;
     }
-    return 0;
+
+    av_init_packet(&sendingPacket);
+    sendingPacket.data = nil;
+    sendingPacket.size = 0;
+    int count = 0;
+    while (av_read_frame(formatContext, &sendingPacket) >= 0) {
+        AVPacket orig_pkt = sendingPacket;
+        do {
+            if (sendingPacket.stream_index == videoStreamIndex){
+                LOGI("GotFrameCount",gotFrameCount);
+                response = avcodec_decode_video2(codecContext, imageFrame, &gotFrameCount, &sendingPacket);
+                if (gotFrameCount)
+                    save_frame_as_jpeg(formatContext,codecContext,imageFrame,count);
+                if (response < 0) {
+                    fprintf(stderr, "Error decoding video frame (%s)\n", av_err2str(response));
+                    return response;
+                }
+            }
+
+            if (response < 0)
+                break;
+            sendingPacket.data += response;
+            sendingPacket.size -= response;
+        } while (sendingPacket.size > 0);
+        count++;
+        av_packet_unref(&orig_pkt);
+    }
+}
+
+int open_codec_context(AVFormatContext* formatContext,int* streamIndex,enum AVMediaType type){
+
+    int response;
+    AVStream *stream;
+    AVCodec *codec;
+    AVDictionary * opts;
+
+    response = av_find_best_stream(formatContext,type,-1,-1,nil,0);
+
+    if (response<0){
+        fprintf(stderr, "Could not find %s with error %s!\n",
+                av_get_media_type_string(type),av_err2str(AVERROR_STREAM_NOT_FOUND));
+        return response;
+    }
+
+    *streamIndex = response;
+
+    LOGI("Response Code",response);
+
+    stream = formatContext->streams[response];
+
+    codec = avcodec_find_decoder(stream->codecpar->codec_id);
+
+    if (!codec){
+        printf("%s\n",av_err2str(AVERROR_DECODER_NOT_FOUND));
+        return AVERROR_DECODER_NOT_FOUND;
+    }
+
+    LOGS("Decoder",codec->long_name);
+
+    av_dict_set(&opts, "refcounted_frames", "0", 0);
+
+    if (avcodec_open2(stream->codec, codec, &opts) < 0) {
+        fprintf(stderr, "Failed to open %s codec\n",
+                av_get_media_type_string(type));
+        return response;
+    }
+
+    return response;
 }
