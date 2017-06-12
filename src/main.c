@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
+#include <vkdecoder.h>
 
 #define CRAZY_DEBUG
 #include "utils.h"
@@ -64,7 +65,6 @@ void save_frame_as_jpeg(AVFormatContext* formatContext,AVCodecContext *codecCont
 
 
 int main(){
-
     AVFormatContext *formatContext = nil;
     AVCodecContext *codecContext = nil;
     AVStream* videoStream = nil;
@@ -78,25 +78,17 @@ int main(){
 
     av_register_all();
 
-    if(avformat_open_input(&formatContext,IP_FILE,null,null)<0){
-        printf("Can't open %s\n",IP_FILE);
-        return 0;
-    }
+    formatContext = vkLoadFormatContext(IP_FILE,nil,nil);
+    codecContext = vkLoadVideoCodecContext(formatContext,&videoStreamIndex,-1,-1,0);
 
-    LOGI("NBStream",formatContext->nb_streams);
-
-    if (avformat_find_stream_info(formatContext, nil) < 0) {
-        fprintf(stderr, "Could not find stream information\n");
-        exit(1);
-    }
-    if(open_codec_context(formatContext,&videoStreamIndex,AVMEDIA_TYPE_VIDEO)>=0){
-        videoStream = formatContext->streams[videoStreamIndex];
-        codecContext = videoStream->codec;
+    if(codecContext){
         response = av_image_alloc(desData,desLineSize,codecContext->width,codecContext->height,codecContext->pix_fmt,1);
+
         if (response < 0) {
             fprintf(stderr, "Could not allocate raw video buffer\n");
             return 0;
         }
+
         buffSize = response;
     } else{
         LOL
@@ -119,11 +111,10 @@ int main(){
     while (av_read_frame(formatContext, &sendingPacket) >= 0) {
         AVPacket orig_pkt = sendingPacket;
         do {
-            if (sendingPacket.stream_index == videoStreamIndex){
-                LOGI("GotFrameCount",gotFrameCount);
+            if (sendingPacket.stream_index == videoStreamIndex) {
                 response = avcodec_decode_video2(codecContext, imageFrame, &gotFrameCount, &sendingPacket);
-                if (gotFrameCount)
-                    save_frame_as_jpeg(formatContext,codecContext,imageFrame,count);
+                if (gotFrameCount && count > 0 && count < 100)
+                    save_frame_as_jpeg(formatContext, codecContext, imageFrame, count);
                 if (response < 0) {
                     fprintf(stderr, "Error decoding video frame (%s)\n", av_err2str(response));
                     return response;
@@ -134,10 +125,12 @@ int main(){
                 break;
             sendingPacket.data += response;
             sendingPacket.size -= response;
+
         } while (sendingPacket.size > 0);
-        count++;
         av_packet_unref(&orig_pkt);
+        count++;
     }
+    return 0;
 }
 
 int open_codec_context(AVFormatContext* formatContext,int* streamIndex,enum AVMediaType type){

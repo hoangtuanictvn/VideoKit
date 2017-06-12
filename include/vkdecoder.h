@@ -2,13 +2,41 @@
 // Created by Thoa Kim on 6/10/17.
 //
 
+
+#ifndef VIDEOKIT_VKDECODER_H
+#define VIDEOKIT_VKDECODER_H
 #include <libavutil/frame.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
-#ifndef VIDEOKIT_VKDECODER_H
-#define VIDEOKIT_VKDECODER_H
+#define CRAZY_DEBUG
+#include "utils.h"
+#define JAVA_CODING_STYLE
+#include "java.h"
 
-extern int vkDecodePacket();
+/**
+ *
+ * @param formatContext
+ * @param streamIndex
+ * @param wanted_stream_nb
+ * @param related_stream
+ * @param flags
+ * @return
+ */
+extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
+                                               int* streamIndex,
+                                               int wanted_stream_nb,
+                                               int related_stream,
+                                               int flags);
+
+/**
+ *
+ * @param file_name
+ * @param fmt
+ * @param options
+ * @return
+ */
+extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt,
+                                            AVDictionary **options);
 
 /**
  * Decoder decode current frame for encoder save to jpg format.
@@ -19,12 +47,8 @@ extern int vkDecodePacket();
  * @param codecContext @ref AVCodecContext point to video context for decode
  *
  */
-extern int vkDecodeVideoPacket(FILE* output,const uint8_t *outputData[4],
-                               int lineSizes[4],
-                               AVCodecContext* codecContext,
-                               AVFrame* frame,AVPacket* packet,
-                               int * gotFrame, int width, int height,
-                               enum AVPixelFormat pixelFormat);
+extern int vkDecodeVideoPacket();
+
 extern int vkDecodeAudioPacket();
 
-#endif //VIDEOKIT_VKDECODER_H
+#endif
