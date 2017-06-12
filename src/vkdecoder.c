@@ -2,7 +2,7 @@
 // Created by Thoa Kim on 6/10/17.
 //
 #include <libavformat/avformat.h>
-#include "vkdecoder.h"
+#include <vkdecoder.h>
 
 extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
                                    int* streamIndex,
@@ -66,4 +66,56 @@ AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt, AVDicti
 
 int vkDecodeVideoPacket(){
 
+}
+
+void vkEncodeJPG(AVFormatContext* formatContext,AVCodecContext *codecContext,
+                 AVFrame *frame, char * fileName,int file_nb){
+    FILE *JPEGFile = nil;
+    AVCodec *jpegCodec = avcodec_find_encoder(AV_CODEC_ID_JPEG2000);
+
+    if (!jpegCodec) {
+        LOGERR("Can't find JPG encoder!");
+        return;
+    }
+
+    AVCodecContext *jpegContext = avcodec_alloc_context3(jpegCodec);
+
+    if (!jpegContext) {
+        LOGERR("Can't alloc JPG codec context!");
+        return;
+    }
+
+    jpegContext->pix_fmt = codecContext->pix_fmt;
+    jpegContext->height = frame->height;
+    jpegContext->width = frame->width;
+    jpegContext->sample_aspect_ratio = codecContext->sample_aspect_ratio;
+    jpegContext->time_base = codecContext->time_base;
+    jpegContext->compression_level = 100;
+    jpegContext->thread_count = 1;
+    jpegContext->prediction_method = 1;
+    jpegContext->flags2 = 0;
+    jpegContext->rc_max_rate = jpegContext->rc_min_rate = jpegContext->bit_rate = 80000000;
+
+    if (avcodec_open2(jpegContext, jpegCodec, NULL) < 0) {
+        LOGERR("Can't open codec!");
+        return;
+    }
+
+    AVPacket packet = {.data = NULL, .size = 0};
+    av_init_packet(&packet);
+    int gotFrame;
+
+    if (avcodec_encode_video2(jpegContext, &packet, frame, &gotFrame) < 0) {
+        return;
+    };
+
+    char fn[255];
+    sprintf(fn, "%s-%d.jpg",fileName,file_nb);
+    LOGI("Save frame ",file_nb);
+    JPEGFile = fopen(fn, "wb");
+    fwrite(packet.data, 1, packet.size, JPEGFile);
+    fclose(JPEGFile);
+
+    av_free_packet(&packet);
+    avcodec_close(jpegContext);
 }

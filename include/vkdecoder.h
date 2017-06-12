@@ -9,9 +9,8 @@
 #include <libavcodec/avcodec.h>
 #include <libavutil/imgutils.h>
 #define CRAZY_DEBUG
-#include "utils.h"
-#define JAVA_CODING_STYLE
-#include "java.h"
+#include <utils.h>
+#include <java.h>
 
 /**
  *
@@ -35,7 +34,8 @@ extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
  * @param options
  * @return
  */
-extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt, AVDictionary **options);
+extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt,
+                                            AVDictionary **options);
 
 /**
  * Decoder decode current frame for encoder save to jpg format.
@@ -49,5 +49,16 @@ extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt, 
 extern int vkDecodeVideoPacket();
 
 extern int vkDecodeAudioPacket();
+
+/**
+ *
+ * @param formatContext
+ * @param codecContext
+ * @param frame
+ * @param fileName
+ * @param file_nb
+ */
+extern void vkEncodeJPG(AVFormatContext* formatContext,AVCodecContext *codecContext,
+                       AVFrame *frame, char * fileName,int file_nb);
 
 #endif

@@ -25,4 +25,4 @@
 #define check(A, M, ...) if(!(A)) { LOGERR(M, ##__VA_ARGS__);}
 #define sentinel(M, ...) LOGERR(M, ##__VA_ARGS__);
 #define check_mem(A) check(A, "Memory allocation error.")
-#endif //VIDEOKIT_UTILS_H
+#endif
