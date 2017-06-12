@@ -35,8 +35,7 @@ extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
  * @param options
  * @return
  */
-extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt,
-                                            AVDictionary **options);
+extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt, AVDictionary **options);
 
 /**
  * Decoder decode current frame for encoder save to jpg format.

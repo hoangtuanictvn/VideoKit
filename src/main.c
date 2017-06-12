@@ -150,8 +150,6 @@ int open_codec_context(AVFormatContext* formatContext,int* streamIndex,enum AVMe
 
     *streamIndex = response;
 
-    LOGI("Response Code",response);
-
     stream = formatContext->streams[response];
 
     codec = avcodec_find_decoder(stream->codecpar->codec_id);

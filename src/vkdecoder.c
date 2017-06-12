@@ -10,9 +10,9 @@ extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
                                    int related_stream,
                                    int flags){
     int response;
-    AVStream *stream;
-    AVCodec *codec;
-    AVDictionary *opts;
+    AVStream *stream = nil;
+    AVCodec *codec = nil;
+    AVDictionary *opts = nil;
 
     response = av_find_best_stream(formatContext,AVMEDIA_TYPE_VIDEO,wanted_stream_nb,related_stream,nil,flags);
 
@@ -20,29 +20,26 @@ extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
         fprintf(stderr, "Could not find %s with error %s!\n",
                 av_get_media_type_string(AVMEDIA_TYPE_VIDEO),av_err2str(AVERROR_STREAM_NOT_FOUND));
         return nil;
+    } else{
+        *streamIndex = response;
+
+        stream = formatContext->streams[response];
+        codec = avcodec_find_decoder(stream->codecpar->codec_id);
+
+        if (!codec){
+            printf("%s\n",av_err2str(AVERROR_DECODER_NOT_FOUND));
+            return nil;
+        }
+
+        //TODO: Fix realloc here
+        av_dict_set(&opts, "refcounted_frames", "0", 0);
+
+        if ((response = avcodec_open2(stream->codec, codec, &opts)) < 0) {
+            fprintf(stderr, "Failed to open %s codec\n",
+                    av_get_media_type_string(AVMEDIA_TYPE_VIDEO));
+            return nil;
+        }
     }
-
-    *streamIndex = response;
-
-    LOGI("Response Code",response);
-
-    stream = formatContext->streams[response];
-    codec = avcodec_find_decoder(stream->codecpar->codec_id);
-
-    if (!codec){
-        printf("%s\n",av_err2str(AVERROR_DECODER_NOT_FOUND));
-        return nil;
-    }
-
-    //TODO: Fix realloc here
-    //av_dict_set(&opts, "refcounted_frames", "0", 0);
-
-    if ((response = avcodec_open2(stream->codec, codec, nil)) < 0) {
-        fprintf(stderr, "Failed to open %s codec\n",
-                av_get_media_type_string(AVMEDIA_TYPE_VIDEO));
-        return nil;
-    }
-
     return stream->codec;
 }
 
