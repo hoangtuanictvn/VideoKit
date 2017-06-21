@@ -15,17 +15,19 @@
 /**
  *
  * @param formatContext
+ * @param type
  * @param streamIndex
  * @param wanted_stream_nb
  * @param related_stream
  * @param flags
  * @return
  */
-extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
-                                               int* streamIndex,
-                                               int wanted_stream_nb,
-                                               int related_stream,
-                                               int flags);
+extern AVCodecContext* vkLoadCodecContext(AVFormatContext* formatContext,
+                                          enum AVMediaType type,
+                                          int* streamIndex,
+                                          int wanted_stream_nb,
+                                          int related_stream,
+                                          int flags);
 
 /**
  *
@@ -38,27 +40,13 @@ extern AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt,
                                             AVDictionary **options);
 
 /**
- * Decoder decode current frame for encoder save to jpg format.
  *
- * @param output Output file point to save file
- * @param outputData Output data stream for save image frame
- * @param lineSizes Line size of output image
- * @param codecContext @ref AVCodecContext point to video context for decode
- *
- */
-extern int vkDecodeVideoPacket();
-
-extern int vkDecodeAudioPacket();
-
-/**
- *
- * @param formatContext
  * @param codecContext
  * @param frame
  * @param fileName
  * @param file_nb
  */
-extern void vkEncodeJPG(AVFormatContext* formatContext,AVCodecContext *codecContext,
+extern void vkEncodeJPG(AVCodecContext *codecContext,
                        AVFrame *frame, char * fileName,int file_nb);
 
 #endif

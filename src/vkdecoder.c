@@ -4,24 +4,29 @@
 #include <libavformat/avformat.h>
 #include <vkdecoder.h>
 
-extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
-                                   int* streamIndex,
-                                   int wanted_stream_nb,
-                                   int related_stream,
-                                   int flags){
+extern AVCodecContext* vkLoadCodecContext(AVFormatContext* formatContext,
+                                          enum AVMediaType type,
+                                          int* streamIndex,
+                                          int wanted_stream_nb,
+                                          int related_stream,
+                                          int flags){
     int response;
     AVStream *stream = nil;
     AVCodec *codec = nil;
     AVDictionary *opts = nil;
 
-    response = av_find_best_stream(formatContext,AVMEDIA_TYPE_VIDEO,wanted_stream_nb,related_stream,nil,flags);
+    response = av_find_best_stream(formatContext,type,
+                                   wanted_stream_nb,related_stream,nil,flags);
 
     if (response<0){
         fprintf(stderr, "Could not find %s with error %s!\n",
-                av_get_media_type_string(AVMEDIA_TYPE_VIDEO),av_err2str(AVERROR_STREAM_NOT_FOUND));
+                av_get_media_type_string(type),av_err2str(AVERROR_STREAM_NOT_FOUND));
         return nil;
     } else{
+
         *streamIndex = response;
+
+        printf("Stream Index: %d\n",response);
 
         stream = formatContext->streams[response];
         codec = avcodec_find_decoder(stream->codecpar->codec_id);
@@ -34,9 +39,9 @@ extern AVCodecContext* vkLoadVideoCodecContext(AVFormatContext* formatContext,
         //TODO: Fix realloc here
         av_dict_set(&opts, "refcounted_frames", "0", 0);
 
-        if ((response = avcodec_open2(stream->codec, codec, &opts)) < 0) {
+        if (avcodec_open2(stream->codec, codec, &opts) < 0) {
             fprintf(stderr, "Failed to open %s codec\n",
-                    av_get_media_type_string(AVMEDIA_TYPE_VIDEO));
+                    av_get_media_type_string(type));
             return nil;
         }
     }
@@ -63,12 +68,7 @@ AVFormatContext* vkLoadFormatContext(char* file_name,AVInputFormat *fmt, AVDicti
     return res;
 }
 
-
-int vkDecodeVideoPacket(){
-
-}
-
-void vkEncodeJPG(AVFormatContext* formatContext,AVCodecContext *codecContext,
+void vkEncodeJPG(AVCodecContext *codecContext,
                  AVFrame *frame, char * fileName,int file_nb){
     FILE *JPEGFile = nil;
     AVCodec *jpegCodec = avcodec_find_encoder(AV_CODEC_ID_JPEG2000);
@@ -110,6 +110,7 @@ void vkEncodeJPG(AVFormatContext* formatContext,AVCodecContext *codecContext,
     };
 
     char fn[255];
+
     sprintf(fn, "%s-%d.jpg",fileName,file_nb);
     LOGI("Save frame ",file_nb);
     JPEGFile = fopen(fn, "wb");

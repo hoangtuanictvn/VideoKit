@@ -1,19 +1,209 @@
-/*
- * @author: Hoang Tuan
- * @date:
- * @filename: main.c
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 
+#define VD_FILE "/Users/anonymousjp/Desktop/test.mp4"
+#define AD_FILE "/Users/anonymousjp/Desktop/test.mp3"
+#define OP_FILE "/Users/anonymousjp/Desktop/out.mp4"
+
 #define CRAZY_DEBUG
 #include <vkdecoder.h>
 
 int main(){
-    AVFormatContext *formatContext = nil;
+    int response;
+    AVOutputFormat* outputFormat = nil;
+    AVFormatContext * audioFormatContext = nil,
+                    * videoFormatContext = nil,
+                    * outputFormatContext = nil;
+    int videoStreamIndex = -1, audioStreamIndex = -1, index = 0;
+    int ouputVideoStreamIndex = -1, outputAudioStreamIndex = -1;
+    AVPacket pkt;
+    pkt.size = 0;
+    pkt.data = nil;
+    int frame_index = 0;
+    int64_t cur_pts_v = 0, cur_pts_a = 0;
+
+    av_register_all();
+
+    if ((response = avformat_open_input(&audioFormatContext, AD_FILE, 0, 0)) < 0) {
+        LOGS("LOGS","Could not open input file.");
+        return response;
+    }
+
+    if ((response = avformat_find_stream_info(audioFormatContext, 0)) < 0) {
+        LOGS("LOGS","Failed to retrieve input stream information");
+        return response;
+    }
+
+    if ((response = avformat_open_input(&videoFormatContext, VD_FILE, 0, 0)) < 0) {
+        LOGS("LOGS","Could not open input file.");
+        return response;
+    }
+    if ((response = avformat_find_stream_info(videoFormatContext, 0)) < 0) {
+        LOGS("LOGS","Failed to retrieve input stream information");
+        return response;
+    }
+    //av_dump_format(audioFormatContext,0,nil,0);
+    //av_dump_format(videoFormatContext,0,nil,0);
+
+    avformat_alloc_output_context2(&outputFormatContext,nil,nil,OP_FILE);
+
+    if (!outputFormatContext) {
+        LOGS("ERROR","Could not create output context");
+        response = AVERROR_UNKNOWN;
+        return response;
+    }
+
+    outputFormat = outputFormatContext->oformat;
+
+
+    for (index = 0; index < videoFormatContext->nb_streams; index++) {
+        if (videoFormatContext->streams[index]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+            videoStreamIndex = index;
+            AVStream *inStream = videoFormatContext->streams[index];
+            AVStream *outStream = avformat_new_stream(outputFormatContext, inStream->codec->codec);
+            if (!outStream) {
+                LOGS("","Failed allocating output stream\n");
+                response = AVERROR_UNKNOWN;
+                return response;
+            }
+
+            ouputVideoStreamIndex = outStream->index;
+
+            if (avcodec_copy_context(outStream->codec, inStream->codec) < 0) {
+                LOGS("ERROR","Failed to copy context from input to output stream codec context\n");
+                return 0;
+            }
+
+            outStream->codec->codec_tag = 0;
+            if (outputFormatContext->oformat->flags & AVFMT_GLOBALHEADER)
+                outStream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+        }
+    }
+
+    for(index = 0;index<audioFormatContext->nb_streams;index++){
+        if (audioFormatContext->streams[index]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
+            audioStreamIndex = index;
+
+            AVStream *in_stream = audioFormatContext->streams[index];
+            AVStream *out_stream = avformat_new_stream(outputFormatContext, in_stream->codec->codec);
+
+            if (!out_stream) {
+                LOGS("ERROR","Failed allocating output stream");
+                response = AVERROR_UNKNOWN;
+                return response;
+            }
+
+            outputAudioStreamIndex = out_stream->index;
+
+            if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
+                LOGS("ERROR","Failed to copy context from input to output stream codec context");
+                return response;
+            }
+
+
+            out_stream->codec->codec_tag = 0;
+
+            if (outputFormatContext->oformat->flags & AVFMT_GLOBALHEADER)
+                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+
+            break;
+        }
+    }
+
+    if (!(outputFormat->flags & AVFMT_NOFILE)) {
+        if (avio_open(&outputFormatContext->pb, OP_FILE, AVIO_FLAG_WRITE) < 0) {
+            LOGERR("Could not open output file '%s'", OP_FILE);
+            return 0;
+        }
+    }
+
+    if (avformat_write_header(outputFormatContext, NULL) < 0) {
+        LOGERR("Error occurred when opening output file");
+        return 0;
+    }
+
+    while(1){
+        AVFormatContext * inpFormatContext;
+        int stream_index = 0;
+        AVStream *in_stream, *out_stream;
+        if(av_compare_ts(cur_pts_v,videoFormatContext->streams[videoStreamIndex]->time_base,
+                         cur_pts_a,audioFormatContext->streams[audioStreamIndex]->time_base)<=0){
+            inpFormatContext = videoFormatContext;
+            stream_index = ouputVideoStreamIndex;
+            if (av_read_frame(inpFormatContext, &pkt) >= 0) {
+                do {
+                    if (pkt.stream_index == videoStreamIndex) {
+                        cur_pts_v = pkt.pts;
+                        break;
+                    }
+                } while (av_read_frame(inpFormatContext, &pkt) >= 0);
+            } else {
+                break;
+            }
+        }else {
+            inpFormatContext = audioFormatContext;
+            stream_index = outputAudioStreamIndex;
+            if (av_read_frame(inpFormatContext, &pkt) >= 0) {
+                do {
+                    if (pkt.stream_index == audioStreamIndex) {
+                        cur_pts_a = pkt.pts;
+                        break;
+                    }
+                } while (av_read_frame(inpFormatContext, &pkt) >= 0);
+            } else {
+                break;
+            }
+
+        }
+        in_stream = inpFormatContext->streams[pkt.stream_index];
+        out_stream = outputFormatContext->streams[stream_index];
+
+        if (pkt.pts == AV_NOPTS_VALUE) {
+            //Write PTS
+            AVRational time_base1 = in_stream->time_base;
+            //Duration between 2 frames (us)
+            int64_t calc_duration = (double) AV_TIME_BASE / av_q2d(in_stream->r_frame_rate);
+            //Parameters
+            pkt.pts = (double) (frame_index * calc_duration) / (double) (av_q2d(time_base1) * AV_TIME_BASE);
+            pkt.dts = pkt.pts;
+            pkt.duration = (double) calc_duration / (double) (av_q2d(time_base1) * AV_TIME_BASE);
+            frame_index++;
+        }
+
+        pkt.pts = av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base, (enum AVRounding) (AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+        pkt.dts = av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base, (enum AVRounding) (AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+        pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
+        pkt.pos = -1;
+        pkt.stream_index = stream_index;
+
+        printf("Write 1 Packet. size:%5d\tpts:%8d\n", pkt.size, pkt.pts);
+        // Write
+        if (av_interleaved_write_frame(outputFormatContext, &pkt) < 0) {
+            LOGS("Error","Error muxing packet");
+            break;
+        }
+        av_free_packet(&pkt);
+    }
+    av_write_trailer(outputFormatContext);
+
+    LOGS("Runtime","Finish");
+
+    avformat_close_input(&videoFormatContext);
+    avformat_close_input(&audioFormatContext);
+
+    if (outputFormatContext && !(outputFormat->flags & AVFMT_NOFILE))
+        avio_close(outputFormatContext->pb);
+    avformat_free_context(outputFormatContext);
+
+    if (response < 0 && response != AVERROR_EOF) {
+        LOGS("ERROR","Error occurred.");
+        return -1;
+    }
+
+    return 0;
+    /*AVFormatContext *formatContext = nil;
     AVCodecContext *codecContext = nil;
     AVStream* videoStream = nil;
     AVFrame* imageFrame;
@@ -26,8 +216,9 @@ int main(){
 
     av_register_all();
 
+
     formatContext = vkLoadFormatContext(IP_FILE,nil,nil);
-    codecContext = vkLoadVideoCodecContext(formatContext,&videoStreamIndex,-1,-1,0);
+    codecContext = vkLoadCodecContext(formatContext,AVMEDIA_TYPE_VIDEO,&videoStreamIndex,-1,-1,0);
 
     if(codecContext){
         response = av_image_alloc(desData,desLineSize,codecContext->width,
@@ -65,7 +256,7 @@ int main(){
                                                  &gotFrameCount, &sendingPacket);
 
                 if (gotFrameCount && count > 0 && count < 100)
-                    vkEncodeJPG(formatContext, codecContext, imageFrame,"LOL", count);
+                    vkEncodeJPG(codecContext, imageFrame,"LOL", count);
 
                 if (response < 0) {
                     fprintf(stderr, "Error decoding video frame (%s)\n", av_err2str(response));
@@ -83,5 +274,5 @@ int main(){
         av_packet_unref(&orig_pkt);
         count++;
     }
-    return 0;
+    return 0;*/
 }

@@ -5,7 +5,7 @@
 #include <errno.h>
 #ifndef VIDEOKIT_UTILS_H
 #define VIDEOKIT_UTILS_H
-#define IP_FILE "/Users/anonymousjp/Desktop/test.mp4"
+
 
 #ifdef CRAZY_DEBUG
 #define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: [__func__] " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
