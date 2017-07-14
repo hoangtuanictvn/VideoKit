@@ -3,7 +3,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 
-#define VD_FILE "/Users/anonymousjp/Desktop/test.mp4"
+#define VD_FILE "/Users/anonymousjp/Desktop/big.mp4"
 #define AD_FILE "/Users/anonymousjp/Desktop/test.mp3"
 #define OP_FILE "/Users/anonymousjp/Desktop/out.mp4"
 
@@ -11,6 +11,7 @@
 #include <vkdecoder.h>
 
 int main(){
+    
     int response;
     AVOutputFormat* outputFormat = nil;
     AVFormatContext * audioFormatContext = nil,
@@ -203,7 +204,9 @@ int main(){
     }
 
     return 0;
-    /*AVFormatContext *formatContext = nil;
+
+    /*
+    AVFormatContext *formatContext = nil;
     AVCodecContext *codecContext = nil;
     AVStream* videoStream = nil;
     AVFrame* imageFrame;
@@ -217,7 +220,7 @@ int main(){
     av_register_all();
 
 
-    formatContext = vkLoadFormatContext(IP_FILE,nil,nil);
+    formatContext = vkLoadFormatContext(VD_FILE,nil,nil);
     codecContext = vkLoadCodecContext(formatContext,AVMEDIA_TYPE_VIDEO,&videoStreamIndex,-1,-1,0);
 
     if(codecContext){
@@ -235,7 +238,7 @@ int main(){
     }
     LOGI("BuffSize",buffSize);
 
-    av_dump_format(formatContext,0,IP_FILE,0);
+    av_dump_format(formatContext,0,VD_FILE,0);
 
     imageFrame = av_frame_alloc();
     if (!imageFrame) {
@@ -255,8 +258,10 @@ int main(){
                 response = avcodec_decode_video2(codecContext, imageFrame,
                                                  &gotFrameCount, &sendingPacket);
 
-                if (gotFrameCount && count > 0 && count < 100)
-                    vkEncodeJPG(codecContext, imageFrame,"LOL", count);
+                if (gotFrameCount && count < 100){
+                    vkEncodeJPG(codecContext, imageFrame,"decode", count);
+                    count++;
+                }
 
                 if (response < 0) {
                     fprintf(stderr, "Error decoding video frame (%s)\n", av_err2str(response));
@@ -269,10 +274,73 @@ int main(){
                 break;
             sendingPacket.data += response;
             sendingPacket.size -= response;
-
         } while (sendingPacket.size > 0);
         av_packet_unref(&orig_pkt);
-        count++;
     }
     return 0;*/
 }
+
+/*int WriteJPEG (AVCodecContext *pCodecCtx, AVFrame *pFrame, int FrameNo){
+    AVCodecContext         *pOCodecCtx;
+    AVCodec                *pOCodec;
+    uint8_t                *Buffer;
+    int                     BufSiz;
+    int                     BufSizActual;
+    int                     ImgFmt = pOCodecCtx->pix_fmt;
+    FILE                   *JPEGFile;
+    char                    JPEGFName[256];
+
+    BufSiz = avpicture_get_size (
+            ImgFmt,pCodecCtx->width,pCodecCtx->height );
+
+    Buffer = (uint8_t *)malloc ( BufSiz );
+    if ( Buffer == NULL )
+        return ( 0 );
+    memset ( Buffer, 0, BufSiz );
+
+    pOCodecCtx = avcodec_alloc_context3(pOCodec);
+    if ( !pOCodecCtx ) {
+        free ( Buffer );
+        return ( 0 );
+    }
+
+    pOCodecCtx->bit_rate      = pCodecCtx->bit_rate;
+    pOCodecCtx->width         = pCodecCtx->width;
+    pOCodecCtx->height        = pCodecCtx->height;
+    pOCodecCtx->pix_fmt       = ImgFmt;
+    pOCodecCtx->codec_id      = AV_CODEC_ID_JPEGLS;
+    pOCodecCtx->codec_type    = AVMEDIA_TYPE_VIDEO;
+    pOCodecCtx->time_base.num = pCodecCtx->time_base.num;
+    pOCodecCtx->time_base.den = pCodecCtx->time_base.den;
+
+    pOCodec = avcodec_find_encoder ( pOCodecCtx->codec_id );
+    if ( !pOCodec ) {
+        free ( Buffer );
+        return ( 0 );
+    }
+    if ( avcodec_open2( pOCodecCtx, pOCodec ,NULL) < 0 ) {
+        free ( Buffer );
+        return ( 0 );
+    }
+
+    pOCodecCtx->mb_lmin        = pOCodecCtx->lmin =
+            pOCodecCtx->qmin * FF_QP2LAMBDA;
+    pOCodecCtx->mb_lmax        = pOCodecCtx->lmax =
+            pOCodecCtx->qmax * FF_QP2LAMBDA;
+    pOCodecCtx->flags          = CODEC_FLAG_QSCALE;
+    pOCodecCtx->global_quality = pOCodecCtx->qmin * FF_QP2LAMBDA;
+
+    pFrame->pts     = 1;
+    pFrame->quality = pOCodecCtx->global_quality;
+    BufSizActual = avcodec_encode_video2(
+            pOCodecCtx,Buffer,BufSiz,pFrame);
+
+    sprintf ( JPEGFName, "%06d.jpg", FrameNo );
+    JPEGFile = fopen ( JPEGFName, "wb" );
+    fwrite ( Buffer, 1, BufSizActual, JPEGFile );
+    fclose ( JPEGFile );
+
+    avcodec_close ( pOCodecCtx );
+    free ( Buffer );
+    return ( BufSizActual );
+}*/

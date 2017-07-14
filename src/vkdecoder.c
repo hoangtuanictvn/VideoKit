@@ -90,11 +90,10 @@ void vkEncodeJPG(AVCodecContext *codecContext,
     jpegContext->width = frame->width;
     jpegContext->sample_aspect_ratio = codecContext->sample_aspect_ratio;
     jpegContext->time_base = codecContext->time_base;
-    jpegContext->compression_level = 100;
+    jpegContext->compression_level = 0;
     jpegContext->thread_count = 1;
-    jpegContext->prediction_method = 1;
     jpegContext->flags2 = 0;
-    jpegContext->rc_max_rate = jpegContext->rc_min_rate = jpegContext->bit_rate = 80000000;
+    //jpegContext->rc_max_rate = jpegContext->rc_min_rate = jpegContext->bit_rate = 80000000;
 
     if (avcodec_open2(jpegContext, jpegCodec, NULL) < 0) {
         LOGERR("Can't open codec!");
